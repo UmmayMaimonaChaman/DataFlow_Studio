@@ -1,4 +1,4 @@
-# 🌌 DataFlow Studio (v1.2.0)
+# 🌌 DataFlow Studio
 
 DataFlow Studio is a high-performance, visual data transformation engine designed for rapid ingestion, processing, and analysis of structured data.
 
@@ -44,7 +44,7 @@ DataFlow Studio is a high-performance, visual data transformation engine designe
 ---
 
 ## 🔒 Security & Privacy
-Data is processed locally or on your private server. No third-party AI APIs (like Gemini) are used in the core processing engine.
+Data is processed locally or on your private server.
 
 ---
 
