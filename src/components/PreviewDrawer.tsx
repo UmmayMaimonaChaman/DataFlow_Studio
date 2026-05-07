@@ -8,6 +8,8 @@ import {
 
 import { useStore } from '../store/useStore';
 
+const API_URL = import.meta.env.PROD ? 'https://chamanmaimona.pythonanywhere.com' : '';
+
 export const PreviewDrawer = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { nodes, selectedNode: selectedId, executionResults, executionLogs, activePipelineId, executionStats } = useStore();
@@ -22,13 +24,13 @@ export const PreviewDrawer = () => {
 
   const handleExport = (format: string) => {
     if (!activePipelineId || !selectedId) return;
-    window.open(`/api/export/${activePipelineId}/${selectedId}/${format}/`);
+    window.open(`${API_URL}/api/export/${activePipelineId}/${selectedId}/${format}/`);
   };
 
   const [sqlExport, setSqlExport] = useState<string | null>(null);
   const fetchSql = async () => {
     if (!activePipelineId) return;
-    const res = await fetch(`/api/pipelines/${activePipelineId}/sql/`);
+    const res = await fetch(`${API_URL}/api/pipelines/${activePipelineId}/sql/`);
     const data = await res.json();
     setSqlExport(data.code);
     setTab('logs');
@@ -74,7 +76,7 @@ export const PreviewDrawer = () => {
                </button>
                <button 
                  onClick={async (e) => { 
-                   e.stopPropagation();                    const res = await fetch(`/api/pipelines/${activePipelineId}/sql/?format=python`);
+                   e.stopPropagation();                    const res = await fetch(`${API_URL}/api/pipelines/${activePipelineId}/sql/?format=python`);
                     const data = await res.json();
                     setSqlExport(data.code);
                     setTab('logs');

@@ -48,7 +48,7 @@ interface PipelineState {
   isUploading: boolean;
   history: HistoryState[];
   future: HistoryState[];
-  executionResults: Record<string, any[]>;
+  executionResults: Record<string, { data: any[], rowCount: number }>;
   executionStats: Record<string, { duration: number, rowCount: number, stats?: any }>;
   executionLogs: string[];
   variables: Record<string, any>;
@@ -84,6 +84,8 @@ interface PipelineState {
   addMagicNode: (parentId: string) => void;
   addNodeWithMagic: (type: NodeType) => void;
 }
+
+const API_URL = import.meta.env.PROD ? 'https://chamanmaimona.pythonanywhere.com' : '';
 
 export const useStore = create<PipelineState>((set, get) => ({
   nodes: [],
@@ -201,7 +203,7 @@ export const useStore = create<PipelineState>((set, get) => ({
 
   fetchFiles: async () => {
     try {
-      const res = await fetch('/api/files/');
+      const res = await fetch(`${API_URL}/api/files/`);
       const data = await res.json();
       set({ files: data });
     } catch (e) {
@@ -211,7 +213,7 @@ export const useStore = create<PipelineState>((set, get) => ({
 
   fetchPipelines: async () => {
     try {
-      const res = await fetch('/api/pipelines/');
+      const res = await fetch(`${API_URL}/api/pipelines/`);
       const data = await res.json();
       set({ pipelines: data });
     } catch (e) {
@@ -225,7 +227,7 @@ export const useStore = create<PipelineState>((set, get) => ({
     const finalName = name || currentPipeline?.name || 'Untitled Pipeline';
     
     const method = activePipelineId ? 'PUT' : 'POST';
-    const url = activePipelineId ? `/api/pipelines/${activePipelineId}/` : '/api/pipelines/';
+    const url = activePipelineId ? `${API_URL}/api/pipelines/${activePipelineId}/` : `${API_URL}/api/pipelines/`;
     
     try {
       const res = await fetch(url, {
@@ -303,7 +305,7 @@ export const useStore = create<PipelineState>((set, get) => ({
       // CRITICAL: Always save the pipeline first so the backend has the latest nodes/edges
       await get().savePipeline();
 
-      const res = await fetch(`/api/pipelines/${activePipelineId}/run/`, { 
+      const res = await fetch(`${API_URL}/api/pipelines/${activePipelineId}/run/`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variables })
@@ -362,7 +364,7 @@ export const useStore = create<PipelineState>((set, get) => ({
     
     set({ isUploading: true });
     try {
-      const res = await fetch('/api/files/upload/', { 
+      const res = await fetch(`${API_URL}/api/files/upload/`, { 
         method: 'POST',
         body: formData,
       });
@@ -409,7 +411,7 @@ export const useStore = create<PipelineState>((set, get) => ({
     try {
       // We don't have a specific delete endpoint yet, so we'll add one to Django
       // or just filter locally if we want to be quick, but better to hit the API.
-      await fetch(`/api/files/${id}/`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/files/${id}/`, { method: 'DELETE' });
       get().fetchFiles();
     } catch (e) {
       console.error('Delete file failed', e);
@@ -418,7 +420,7 @@ export const useStore = create<PipelineState>((set, get) => ({
 
   deletePipeline: async (id: string) => {
     try {
-      await fetch(`/api/pipelines/${id}/`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/pipelines/${id}/`, { method: 'DELETE' });
       if (get().activePipelineId === id) {
         get().createNewPipeline();
       }
@@ -445,6 +447,9 @@ export const useStore = create<PipelineState>((set, get) => ({
     const { activePipelineId, pipelines } = get();
     if (!activePipelineId) return;
     
+    const updatedPipelines = pipelines.map(p => 
+      p.id === activePipelineId ? { ...p, name: newName } : p
+    );
     set({ pipelines: updatedPipelines });
   },
 
