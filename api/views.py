@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from .models import UploadedFile, Pipeline
 from .serializers import UploadedFileSerializer, PipelineSerializer
-from .engine import apply_transform, load_file_data
+from .engine import apply_transform, load_file_data, _PROFILER_STATS
 import os
 import pandas as pd
 import json
@@ -122,7 +122,7 @@ class PipelineViewSet(viewsets.ModelViewSet):
                     execution_stats[node_id] = {
                         'duration': int((time.time() - start_time) * 1000),
                         'rowCount': len(result_df) if result_df is not None else 0,
-                        'stats': getattr(result_df, '_stats', None)
+                        'stats': _PROFILER_STATS.get(node_id)
                     }
                     processed_nodes.add(node_id)
         

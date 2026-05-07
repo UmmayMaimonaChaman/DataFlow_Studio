@@ -3,7 +3,10 @@ import numpy as np
 import os
 from django.conf import settings
 
-def apply_transform(df, node, input_data_map={}):
+# Global dict to store profiler stats (avoids pandas attribute issues)
+_PROFILER_STATS: dict = {}
+
+def apply_transform(df, node, input_data_map={}, variables={}):
     if df is None: return None
     
     node_type = node.get('data', {}).get('type')
@@ -81,25 +84,29 @@ def apply_transform(df, node, input_data_map={}):
                 result = pd.merge(result, secondary_df, left_on=left_key, right_on=right_key, how=join_type)
 
         elif node_type == 'profiler':
-            # Profiler adds stats to the result object in a special field
-            # In Python we can return it as an attribute or separate metadata
+            # Passthrough — stats are computed on-the-fly in the view
+            # We tag the df with a non-pandas attribute via a workaround dict
             stats = {}
-            if len(result) > 0:
+            try:
                 for col in result.columns:
                     series = result[col]
-                    stats[col] = {
+                    col_stats = {
                         'count': int(series.count()),
                         'unique': int(series.nunique()),
                         'nulls': int(series.isnull().sum()),
                         'type': str(series.dtype)
                     }
                     if pd.api.types.is_numeric_dtype(series):
-                        stats[col].update({
+                        col_stats.update({
                             'min': float(series.min()),
                             'max': float(series.max()),
                             'avg': float(series.mean())
                         })
-            result._stats = stats
+                    stats[col] = col_stats
+            except Exception as stat_err:
+                print(f'Profiler stats error: {stat_err}')
+            # Store stats in a separate global dict keyed by node id
+            _PROFILER_STATS[node.get('id', '')] = stats
 
     except Exception as e:
         print(f"Transform error in node {node.get('id')}: {e}")

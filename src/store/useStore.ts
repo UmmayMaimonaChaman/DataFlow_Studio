@@ -300,41 +300,54 @@ export const useStore = create<PipelineState>((set, get) => ({
     
     set({ isLoading: true, executionLogs: ['Engine Initializing...'] });
     try {
+      // CRITICAL: Always save the pipeline first so the backend has the latest nodes/edges
+      await get().savePipeline();
+
       const res = await fetch(`/api/pipelines/${activePipelineId}/run/`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variables })
       });
-      const result = await res.json();
+
+      let result: any = {};
+      try {
+        result = await res.json();
+      } catch {
+        throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+      }
+
+      if (!res.ok) {
+        const errMsg = result?.detail || result?.error || `HTTP ${res.status}`;
+        set({ executionLogs: [`ERROR: ${errMsg}`] });
+        return;
+      }
       
       if (result.status === 'success') {
-         // Re-fetch pipeline to get sampled results
-         const freshRes = await fetch(`/api/pipelines/${activePipelineId}/`);
-         const data = await freshRes.json();
-      
-         if (freshRes.ok) {
-           set({ 
-             nodes: nodes.map(n => {
-               const nodeResult = data.results[n.id];
-               return {
-                 ...n,
-                 data: {
-                   ...n.data,
-                   preview: nodeResult ? nodeResult.data : [],
-                   rowCount: nodeResult ? nodeResult.rowCount : 0
-                 }
-               };
-             }),
-             executionResults: data.results || {},
-             executionLogs: data.logs || [],
-             executionStats: result.executionStats || {},
-             isLoading: false
-           });
-         }
+         // Use results directly from the run response — no need for extra fetch
+         const resultsMap = result.results || {};
+         set({ 
+           nodes: get().nodes.map(n => {
+             const nodeResult = resultsMap[n.id];
+             return {
+               ...n,
+               data: {
+                 ...n.data,
+                 preview: nodeResult ? nodeResult.data : [],
+                 rowCount: nodeResult ? nodeResult.rowCount : 0
+               }
+             };
+           }),
+           executionResults: resultsMap,
+           executionLogs: result.logs || ['Pipeline completed.'],
+           executionStats: result.executionStats || {},
+           isLoading: false
+         });
+      } else {
+        set({ executionLogs: [`ERROR: ${result?.error || 'Unknown pipeline error'}`] });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Pipeline run failed', e);
-      set({ executionLogs: ['CRITICAL: Execution failed.'] });
+      set({ executionLogs: [`CRITICAL: ${e?.message || 'Execution failed. Check backend logs.'}`] });
     } finally {
       set({ isLoading: false });
     }
