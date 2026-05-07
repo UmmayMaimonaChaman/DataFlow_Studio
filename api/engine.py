@@ -80,8 +80,6 @@ def apply_transform(df, node, input_data_map={}):
             if left_key and right_key and secondary_df is not None and left_key in result.columns and right_key in secondary_df.columns:
                 result = pd.merge(result, secondary_df, left_on=left_key, right_on=right_key, how=join_type)
 
-                result = result.groupby(group_col)[agg_col].agg(op).reset_index(name=agg_name)
-
         elif node_type == 'profiler':
             # Profiler adds stats to the result object in a special field
             # In Python we can return it as an attribute or separate metadata
