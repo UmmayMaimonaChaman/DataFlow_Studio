@@ -1,0 +1,6 @@
+{
+  "name": "DataFlow Studio",
+  "description": "Visual ETL Pipeline Builder with drag-and-drop nodes, CSV/Excel ingestion, and real-time data profiling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
