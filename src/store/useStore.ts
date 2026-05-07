@@ -25,6 +25,7 @@ export interface PipelineNode extends Node {
     label: string;
     type: NodeType;
     config: any;
+    rowCount?: number;
     preview?: any[];
     error?: string;
     validationErrors?: string[];
